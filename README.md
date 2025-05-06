@@ -57,7 +57,7 @@ btc-price-prediction-ai/
 ```
 ---
 
-🚀 How to Run
+## 🚀 How to Run
 1. Clone the repo
 bash
 Copy
@@ -81,10 +81,10 @@ Add dag_btc_pipeline.py to your Airflow DAG folder
 
 Trigger DAG to ingest data & train models
 
-🔮 Example Forecast Plot
+##🔮 Example Forecast Plot
 (You can add plots/images later here)
 
-💡 Future Improvements
+##💡 Future Improvements
 Add multi-coin prediction support
 
 Use exchange APIs for real-time data & order books
