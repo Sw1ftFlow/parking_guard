@@ -1,0 +1,25 @@
+# Databricks notebook source
+import requests
+import pandas as pd
+from datetime import datetime
+
+url = f"https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=90"
+response = requests.get(url)
+data = response.json()
+
+# Convert 'prices', 'market_caps', 'total_volumes' into DataFrames
+df_prices = pd.DataFrame(data['prices'], columns=['timestamp', 'price'])
+df_market_cap = pd.DataFrame(data['market_caps'], columns=['timestamp', 'market_cap'])
+df_volume = pd.DataFrame(data['total_volumes'], columns=['timestamp', 'volume'])
+
+# Merge all into a single DataFrame on timestamp
+df = df_prices.merge(df_market_cap, on='timestamp').merge(df_volume, on='timestamp')
+
+# Convert timestamp to datetime
+df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+# Set timestamp as index (good for time series)
+df.set_index('timestamp', inplace=True)
+
+# Display result
+print(df.head())
