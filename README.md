@@ -55,13 +55,14 @@ btc-price-prediction-ai/
 ├── requirements.txt
 └── LICENSE
 ```
+
 ---
 
 ## 🚀 How to Run
-1. Clone the repo
-bash
-Copy
-Edit
+
+### 1. Clone the repo
+
+```bash
 git clone https://github.com/your-username/btc-price-prediction-ai.git
 cd btc-price-prediction-ai
 2. Install requirements
@@ -81,10 +82,14 @@ Add dag_btc_pipeline.py to your Airflow DAG folder
 
 Trigger DAG to ingest data & train models
 
-##🔮 Example Forecast Plot
+🔮 Example Forecast Plot
 (You can add plots/images later here)
 
-##💡 Future Improvements
+💡 Future Improvements
 Add multi-coin prediction support
 
 Use exchange APIs for real-time data & order books
+
+Integrate LangChain chatbot for Q&A on predictions
+
+Deploy model as a REST API
