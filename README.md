@@ -34,7 +34,7 @@ This is an end-to-end learning project using **Databricks**, **Airflow**, and **
 - Endpoint: `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart`
 - Frequency: Hourly
 - Data: `price`, `market_cap`, `volume`
-- Time Period: Last 180 days
+- Time Period: Last 90 days
 
 ---
 
