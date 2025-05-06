@@ -65,31 +65,7 @@ btc-price-prediction-ai/
 ```bash
 git clone https://github.com/your-username/btc-price-prediction-ai.git
 cd btc-price-prediction-ai
-2. Install requirements
-bash
-Copy
-Edit
+
 pip install -r requirements.txt
-3. Setup Databricks
-Import notebooks under /notebooks/
 
-Configure your cluster
 
-Set up access tokens if needed
-
-4. Run Airflow DAG (Optional)
-Add dag_btc_pipeline.py to your Airflow DAG folder
-
-Trigger DAG to ingest data & train models
-
-🔮 Example Forecast Plot
-(You can add plots/images later here)
-
-💡 Future Improvements
-Add multi-coin prediction support
-
-Use exchange APIs for real-time data & order books
-
-Integrate LangChain chatbot for Q&A on predictions
-
-Deploy model as a REST API
