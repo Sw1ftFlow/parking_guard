@@ -63,7 +63,7 @@ btc-price-prediction-ai/
 ### 1. Clone the repo
 
 ```bash```
-```git clone https://github.com/your-username/btc-price-prediction-ai.git```
+```git clone https://github.com/Sw1ftFlow/btc-price-prediction-ai.git```
 ```cd btc-price-prediction-ai```
 ### 2. Install requirements
 ```bash```
