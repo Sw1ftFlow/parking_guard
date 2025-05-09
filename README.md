@@ -43,8 +43,8 @@ btc-price-prediction-ai/
 │   ├── 01_ingest_data_coingecko.ipynb
 │   ├── 02_feature_engineering.ipynb
 │   ├── 03_model_training.ipynb
-├── airflow/
-│   └── dag_btc_pipeline.py
+├── workflows/
+│   └── btc_price_predictions
 ├── data/
 │   └── (optional sample data files)
 ├── README.md
