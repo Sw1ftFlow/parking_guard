@@ -73,7 +73,8 @@ pip install -r requirements.txt
 - Trigger Workflow to ingest data & train models
 
 ## 🔮 Example Forecast Plot
-(You can add plots/images later here)
+<img width="1190" alt="btc_price_prediction_chart" src="https://github.com/user-attachments/assets/f6f3960c-f09c-4c34-8557-781479e3f7b8" />
+
 
 ## 💡 Future Improvements
 - Add twitter data and intepret sentiment with llm
