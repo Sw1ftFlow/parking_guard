@@ -77,7 +77,7 @@ pip install -r requirements.txt
 
 
 ## 💡 Future Improvements
-- Add twitter data and intepret sentiment with llm
+- Add X data and interpret tweet sentiment with language agent
 - Use exchange APIs for real-time data & order books
 
 
