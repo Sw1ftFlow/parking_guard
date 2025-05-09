@@ -8,9 +8,8 @@ This is an end-to-end learning project using **Databricks**, **Airflow**, and **
 
 - Ingest historical BTC data via public API (CoinGecko)
 - Build a Lakehouse pipeline in **Databricks** using Delta tables
-- Orchestrate the workflow using **Apache Airflow**
-- Train an AI model (LSTM / Prophet) to forecast BTC price
-- Interact with the data using an LLM-based interface
+- Orchestrate the workflow using **Darabricks Workflows**
+- Train an AI model (XGBClassifier) to forecast BTC price increase or decrease
 
 ---
 
@@ -19,11 +18,9 @@ This is an end-to-end learning project using **Databricks**, **Airflow**, and **
 | Tool | Purpose |
 |------|---------|
 | **Databricks** | Data engineering, processing & model training |
-| **Apache Airflow** | Orchestration of data ingestion & model runs |
+| **Darabricks Workflows** | Orchestration of data ingestion & model runs |
 | **CoinGecko API** | Source of BTC market data |
 | **Python** | Core language |
-| **MLflow / PyTorch / Prophet** | AI model training |
-| **LangChain / OpenAI / LLamaIndex** | LLM interaction with data (optional)
 
 ---
 
@@ -46,7 +43,6 @@ btc-price-prediction-ai/
 │   ├── 01_ingest_data_coingecko.ipynb
 │   ├── 02_feature_engineering.ipynb
 │   ├── 03_model_training.ipynb
-│   └── 04_llm_interface.ipynb
 ├── airflow/
 │   └── dag_btc_pipeline.py
 ├── data/
@@ -73,15 +69,14 @@ pip install -r requirements.txt
 - Configure your cluster
 - Set up access tokens if needed
 
-### 4. Run Airflow DAG (Optional)
-- Add dag_btc_pipeline.py to your Airflow DAG folder
-- Trigger DAG to ingest data & train models
+### 4. Run Databricks Workflow (Optional)
+- Trigger Workflow to ingest data & train models
 
 ## 🔮 Example Forecast Plot
 (You can add plots/images later here)
 
 ## 💡 Future Improvements
-- Add multi-coin prediction support
+- Add twitter data and intepret sentiment with llm
 - Use exchange APIs for real-time data & order books
 
 
