@@ -9,3 +9,9 @@ In 16/19 predictions on what the price would be in the next hour the model was w
 I realized in order for this model to be somewhat useful and atleast generate an above 50% accurate prediction, something had to change. 
 
 I decided to focus on predicting the direction of the market/price as my main objective. This meant I needed to make a change in model to a classification model instead of a regressor. I also decided to add a bunch more features that are relevant. To be continued. 
+
+
+Dear diary,
+I tried my best to improve the model but it still sucks. I have been messing with hyperparamenter tuning all day and its been messing up the model. I can hardly get to a correct prediction of up or down above 50%. 
+
+I am not sure if I need more data. I am using hourly 90 day historical data. I don't have orderbook or news data integrated. 
