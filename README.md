@@ -14,7 +14,7 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ---
 
-## 🛠 Hardware
+##  Hardware
 
 | Tool | Purpose |
 |------|---------|
