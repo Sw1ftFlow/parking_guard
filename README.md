@@ -1,10 +1,10 @@
-# 🪙 NO MORE PARKING TICKETS
+#  NO MORE PARKING TICKETS
 
 This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio 300**, and **YOLO11n model** to detect when a parking guard is spotted in frame and sends a sms message to the owner using **Twilio**. The live feed is accessible via a local webserver setup using **Flask**.
 
 ---
 
-## 📌 Project Goals
+##  Project Goals
 
 - Detect parking guards before they can give you a ticket
 - Set up a live feed accessible within the local network
@@ -14,7 +14,7 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ---
 
-## 🛠️ Hardware
+## 🛠 Hardware
 
 | Tool | Purpose |
 |------|---------|
@@ -25,7 +25,7 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ---
 
-## 📈 Model
+##  Model
 
 **Yolo11n**
 
@@ -36,7 +36,7 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 parking_guard_detection/
