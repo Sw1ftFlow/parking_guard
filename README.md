@@ -1,44 +1,45 @@
-# 🪙 BTC Price Prediction with AI, Databricks & Airflow
+# 🪙 NO MORE PARKING TICKETS
 
-This is an end-to-end learning project using **Databricks**, **Airflow**, and **AI/ML models** to predict the price of **Bitcoin (BTC)** based on historical cryptocurrency data from the **CoinGecko API**.
+This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio 300**, and **YOLO11n model** to detect when a parking guard is spotted in frame and sends a sms message to the owner using **Twilio**. The live feed is accessible via a local webserver setup using **Flask**.
 
 ---
 
 ## 📌 Project Goals
 
-- Ingest historical BTC data via public API (CoinGecko)
-- Build a Lakehouse pipeline in **Databricks** using Delta tables
-- Orchestrate the workflow using **Darabricks Workflows**
-- Train an AI model (XGBClassifier) to forecast BTC price increase or decrease
+- Detect parking guards before they can give you a ticket
+- Set up a live feed accessible within the local network
+- Send a sms warning message when a parking guard is spotted
+- Automatically purchase a parking ticket when a parking guard is spotted in frame
+- Log data in a csv for analytics and insights 
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Hardware
 
 | Tool | Purpose |
 |------|---------|
-| **Databricks** | Data engineering, processing & model training |
-| **Darabricks Workflows** | Orchestration of data ingestion & model runs |
-| **CoinGecko API** | Source of BTC market data |
+| **Rasperry Pie 5 (8GB)** | Run the python code, processing & model training |
+| **Logitech Brio 300** | Capture Video |
+| **SD Card 32GB** | Harddrive |
 | **Python** | Core language |
 
 ---
 
-## 📈 Data Source
+## 📈 Model
 
-**CoinGecko Market Chart API**
+**Yolo11n**
 
-- Endpoint: `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart`
-- Frequency: Hourly
-- Data: `price`, `market_cap`, `volume`
-- Time Period: Last 90 days
+- The base model is a Yolo11n (nano) the smallest and fastest model, but also least accurate 
+- FPS: The camera feed usually provides a video stream of around 6-7 FPS and a resolution of 1280x720
+- Stream: The stream is accessiable via a flask app setup and can be viewed while inside the local network. The stream is protected using a login and password
+- Guard detection: The model is pre-trained to recognize people and create bounding boxes. Once a bounding box consits of a certain amount of yellow pixels the model will flag this as a parking guard. Simple yet effective. 
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-btc-price-prediction-ai/
+parking_guard_detection/
 ├── notebooks/
 │   ├── 01_ingest_data_coingecko.ipynb
 │   ├── 02_feature_engineering.ipynb
@@ -52,33 +53,6 @@ btc-price-prediction-ai/
 └── LICENSE
 ```
 
----
-
-## 🚀 How to Run
-
-### 1. Clone the repo
-
-```bash```
-```git clone https://github.com/Sw1ftFlow/btc-price-prediction-ai.git```
-```cd btc-price-prediction-ai```
-### 2. Install requirements
-```bash```
-pip install -r requirements.txt
-### 3. Setup Databricks
-- Import notebooks under /notebooks/
-- Configure your cluster
-- Set up access tokens if needed
-
-### 4. Run Databricks Workflow (Optional)
-- Trigger Workflow to ingest data & train models
-
-## 🔮 Example Forecast Plot
-<img width="1190" alt="btc_price_prediction_chart" src="https://github.com/user-attachments/assets/f6f3960c-f09c-4c34-8557-781479e3f7b8" />
-
-
-## 💡 Future Improvements
-- Add X data and interpret tweet sentiment with language agent
-- Use exchange APIs for real-time data & order books
 
 
 
