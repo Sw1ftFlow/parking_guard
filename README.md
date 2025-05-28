@@ -57,7 +57,3 @@ parking_guard_detection/
 ├── README.md
 ├── requirements.txt
 └── LICENSE
-
-
-
-
