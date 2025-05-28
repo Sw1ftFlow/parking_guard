@@ -40,14 +40,9 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ```text
 parking_guard_detection/
-├── notebooks/
-│   ├── 01_ingest_data_coingecko.ipynb
-│   ├── 02_feature_engineering.ipynb
-│   ├── 03_model_training.ipynb
-├── workflows/
-│   └── btc_price_predictions
-├── data/
-│   └── (optional sample data files)
+├── Code/
+├── Images/
+│   └── 2 example images
 ├── README.md
 ├── requirements.txt
 └── LICENSE
