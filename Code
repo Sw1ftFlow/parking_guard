@@ -1,0 +1,397 @@
+import os
+import sys
+import argparse
+import glob
+import time
+import threading
+import csv
+from datetime import datetime
+
+import cv2
+import numpy as np
+from ultralytics import YOLO
+from flask import Flask, Response, request, redirect, url_for, session, render_template_string
+import simplepam
+import requests
+
+
+
+# logging
+def get_next_log_filename(directory="."):
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    idx = 0
+    while True:
+        filename = f"{today_str}_{idx}.csv"
+        filepath = os.path.join(directory, filename)
+        if not os.path.exists(filepath):
+            return filepath
+        idx += 1
+
+def log_person_event_to_csv(filename, tid, class_name, entry, exit_, dwell):
+    file_exists = os.path.isfile(filename)
+    with open(filename, 'a', newline='') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(['id', 'class', 'entry', 'exit', 'dwell_seconds'])
+        writer.writerow([tid, class_name, time.ctime(entry), time.ctime(exit_), f"{dwell:.2f}"])
+        
+# send sms with Twilio
+def send_twilio_sms(to_number, body, messaging_service_sid, account_sid, auth_token):
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+    data = {
+        'To': to_number,
+        'MessagingServiceSid': messaging_service_sid,
+        'Body': body
+    }
+    response = requests.post(
+        url,
+        data=data,
+        auth=(account_sid, auth_token)
+    )
+    if response.status_code == 201:
+        print("SMS sent successfully!")
+    else:
+        print(f"Failed to send SMS: {response.status_code} {response.text}")
+
+        
+# init
+log_dir = "/home/admin/yolo/log"
+os.makedirs("/home/admin/yolo/log", exist_ok=True)
+log_filename = get_next_log_filename(log_dir)
+# Flask app setup
+app = Flask(__name__)
+app.secret_key = 'jagarbast123'  # Change this to a secure value!
+
+# Global variable for the latest frame
+latest_frame = None
+frame_lock = threading.Lock()
+
+# --- Authentication (simplepam) ---
+LOGIN_FORM = '''
+<!doctype html>
+<title>Login</title>
+<h2>Login with your Raspberry Pi credentials</h2>
+<form method="post">
+  <input name="username" placeholder="Username" required>
+  <input name="password" type="password" placeholder="Password" required>
+  <input type="submit" value="Login">
+</form>
+'''
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user = request.form['username']
+        pw = request.form['password']
+        if simplepam.authenticate(user, pw):
+            session['user'] = user
+            return redirect(url_for('video_feed'))
+        else:
+            return render_template_string(LOGIN_FORM + "<p style='color:red;'>Login failed</p>")
+    return render_template_string(LOGIN_FORM)
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
+
+from functools import wraps
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/video_feed')
+@login_required
+def video_feed():
+    return Response(generate_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+# --- End Authentication ---
+
+# --- Video and YOLO setup ---
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', required=True)
+parser.add_argument('--source', required=True)
+parser.add_argument('--thresh', default=0.5)
+parser.add_argument('--resolution', default=None)
+parser.add_argument('--record', action='store_true')
+args = parser.parse_args()
+
+model_path = args.model
+img_source = args.source
+min_thresh = float(args.thresh)
+user_res = args.resolution
+record = args.record
+
+if (not os.path.exists(model_path)):
+    print('ERROR: Model path is invalid or model was not found. Make sure the model filename was entered correctly.')
+    sys.exit(0)
+
+model = YOLO(model_path, task='detect')
+labels = model.names
+
+img_ext_list = ['.jpg','.JPG','.jpeg','.JPEG','.png','.PNG','.bmp','.BMP']
+vid_ext_list = ['.avi','.mov','.mp4','.mkv','.wmv']
+
+if os.path.isdir(img_source):
+    source_type = 'folder'
+elif os.path.isfile(img_source):
+    _, ext = os.path.splitext(img_source)
+    if ext in img_ext_list:
+        source_type = 'image'
+    elif ext in vid_ext_list:
+        source_type = 'video'
+    else:
+        print(f'File extension {ext} is not supported.')
+        sys.exit(0)
+elif 'usb' in img_source:
+    source_type = 'usb'
+    usb_idx = int(img_source[3:])
+elif 'picamera' in img_source:
+    source_type = 'picamera'
+    picam_idx = int(img_source[8:])
+else:
+    print(f'Input {img_source} is invalid. Please try again.')
+    sys.exit(0)
+
+resize = False
+if user_res:
+    resize = True
+    resW, resH = int(user_res.split('x')[0]), int(user_res.split('x')[1])
+
+if record:
+    if source_type not in ['video','usb']:
+        print('Recording only works for video and camera sources. Please try again.')
+        sys.exit(0)
+    if not user_res:
+        print('Please specify resolution to record video at.')
+        sys.exit(0)
+    record_name = 'demo1.avi'
+    record_fps = 30
+    recorder = cv2.VideoWriter(record_name, cv2.VideoWriter_fourcc(*'MJPG'), record_fps, (resW,resH))
+
+if source_type == 'image':
+    imgs_list = [img_source]
+elif source_type == 'folder':
+    imgs_list = []
+    filelist = glob.glob(img_source + '/*')
+    for file in filelist:
+        _, file_ext = os.path.splitext(file)
+        if file_ext in img_ext_list:
+            imgs_list.append(file)
+elif source_type == 'video' or source_type == 'usb':
+    if source_type == 'video': cap_arg = img_source
+    elif source_type == 'usb': cap_arg = usb_idx
+    cap = cv2.VideoCapture(cap_arg)
+    if user_res:
+        cap.set(3, resW)
+        cap.set(4, resH)
+elif source_type == 'picamera':
+    from picamera2 import Picamera2
+    cap = Picamera2()
+    cap.configure(cap.create_video_configuration(main={"format": 'XRGB8888', "size": (resW, resH)}))
+    cap.start()
+
+bbox_colors = [(164,120,87), (68,148,228), (93,97,209), (178,182,133), (88,159,106), 
+              (96,202,231), (159,124,168), (169,162,241), (98,118,150), (172,176,184)]
+
+avg_frame_rate = 0
+frame_rate_buffer = []
+fps_avg_len = 200
+img_count = 0
+
+# --- Person tracking setup ---
+person_tracks = {}  # {track_id: {'entry': timestamp, 'exit': timestamp, 'class': class_name, 'missed': 0}}
+MAX_MISSED_FRAMES = 15  # Number of frames to wait before considering a person as exited
+
+def generate_frames():
+    global latest_frame
+    while True:
+        with frame_lock:
+            if latest_frame is None:
+                continue
+            ret, buffer = cv2.imencode('.jpg', latest_frame)
+            frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+def run_flask():
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, use_reloader=False)
+
+# Start Flask server in a separate thread
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.daemon = True
+flask_thread.start()
+
+# --- Main inference loop ---
+while True:
+    t_start = time.perf_counter()
+
+    if source_type == 'image' or source_type == 'folder':
+        if img_count >= len(imgs_list):
+            print('All images have been processed. Exiting program.')
+            sys.exit(0)
+        img_filename = imgs_list[img_count]
+        frame = cv2.imread(img_filename)
+        img_count = img_count + 1
+        results = model(frame, verbose=False)
+    elif source_type in ['video', 'usb', 'picamera']:
+        if source_type == 'video':
+            ret, frame = cap.read()
+            if not ret:
+                print('Reached end of the video file. Exiting program.')
+                break
+        elif source_type == 'usb':
+            ret, frame = cap.read()
+            if (frame is None) or (not ret):
+                print('Unable to read frames from the camera. This indicates the camera is disconnected or not working. Exiting program.')
+                break
+        elif source_type == 'picamera':
+            frame_bgra = cap.capture_array()
+            frame = cv2.cvtColor(np.copy(frame_bgra), cv2.COLOR_BGRA2BGR)
+            if (frame is None):
+                print('Unable to read frames from the Picamera. This indicates the camera is disconnected or not working. Exiting program.')
+                break
+
+        # --- Use tracking for video/camera sources ---
+        results = model.track(frame, persist=True, classes=[0], verbose=False)  # 0 is 'person' class
+    else:
+        continue
+
+    detections = results[0].boxes
+    object_count = 0
+    #start_logging
+    
+    
+    # --- Person tracking logic ---
+    now = time.time()
+    current_ids = set()
+    if hasattr(detections, "id") and detections.id is not None:
+        track_ids = detections.id.int().cpu().tolist()
+        class_ids = detections.cls.int().cpu().tolist()
+        for tid, cid in zip(track_ids, class_ids):
+            if labels[cid] == "person":
+                current_ids.add(tid)
+                if tid not in person_tracks:
+                    person_tracks[tid] = {'entry': now, 'exit': now, 'class': labels[cid], 'missed': 0}
+                else:
+                    person_tracks[tid]['exit'] = now
+                    person_tracks[tid]['missed'] = 0
+
+    # Update missed frame count and check for exits
+    for tid in list(person_tracks.keys()):
+        if tid not in current_ids:
+            person_tracks[tid]['missed'] += 1
+            if person_tracks[tid]['missed'] == MAX_MISSED_FRAMES:
+                entry = person_tracks[tid]['entry']
+                exit_ = person_tracks[tid]['exit']
+                dwell = exit_ - entry
+                print(f"Person ID {tid} ({person_tracks[tid]['class']}): Entry: {time.ctime(entry)}, Exit: {time.ctime(exit_)}, Dwell: {dwell:.2f} seconds")
+                # Optionally, save to file/database here
+                log_person_event_to_csv(
+                    log_filename,
+                    tid,
+                    person_tracks[tid]['class'],
+                    entry,
+                    exit_,
+                    dwell
+                )
+                #
+                del person_tracks[tid]
+                
+    # Text cooldown
+    last_sms_time = 0  # Timestamp of last SMS sent
+    sms_cooldown = 900  # 15 minutes in seconds
+
+    # --- Draw boxes and labels ---
+    for i in range(len(detections)):
+        xyxy_tensor = detections[i].xyxy.cpu()
+        xyxy = xyxy_tensor.numpy().squeeze()
+        xmin, ymin, xmax, ymax = xyxy.astype(int)
+        classidx = int(detections[i].cls.item())
+        classname = labels[classidx]
+        conf = detections[i].conf.item()
+        label = f'{classname}: {int(conf*100)}%'
+        if hasattr(detections, "id") and detections.id is not None:
+            tid = int(detections[i].id.item())
+            label += f' ID:{tid}'
+        if conf > min_thresh:
+            color = bbox_colors[classidx % 10]
+            cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), color, 2)
+            labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            label_ymin = max(ymin, labelSize[1] + 10)
+            cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), color, cv2.FILLED)
+            cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            object_count = object_count + 1
+
+            # --- Yellow vest detection (single frame) ---
+            if classname == "person":
+                person_crop = frame[ymin:ymax, xmin:xmax]
+                if person_crop.size > 0:
+                    lab = cv2.cvtColor(person_crop, cv2.COLOR_BGR2LAB)
+                    L, A, B = cv2.split(lab)
+                    yellow_mask = cv2.inRange(B, 145, 255)
+                    yellow_ratio = cv2.countNonZero(yellow_mask) / (person_crop.shape[0] * person_crop.shape[1])
+                    if yellow_ratio > 0.1:
+                        print("Security guard detected!")
+                        cv2.putText(frame, "PARKING GUARD", (xmin, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,255), 2)
+                        
+                        # --- SMS cooldown logic ---
+                        current_time = time.time()
+                        if current_time - last_sms_time > sms_cooldown:
+                            send_twilio_sms(
+                                to_number="+46735111116",
+                                body="Ahoy! A parking guard has been sighted near your car!",
+                                messaging_service_sid="MGa0cf5198a6997e71254070aa1884df9c",
+                                account_sid="********",
+                                auth_token="********"
+                            )
+                            last_sms_time = current_time
+
+
+    if source_type in ['video', 'usb', 'picamera']:
+        cv2.putText(frame, f'FPS: {avg_frame_rate:0.2f}', (10,20), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2)
+    cv2.putText(frame, f'Number of objects: {object_count}', (10,40), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,255,255), 2)
+
+    # Update the latest frame for Flask streaming
+    with frame_lock:
+        latest_frame = frame.copy()
+
+    # Optionally display locally
+    cv2.imshow('YOLO detection results', frame)
+    if record:
+        recorder.write(frame)
+    if source_type == 'image' or source_type == 'folder':
+        key = cv2.waitKey()
+    else:
+        key = cv2.waitKey(5)
+    if key == ord('q') or key == ord('Q'):
+        break
+    elif key == ord('s') or key == ord('S'):
+        cv2.waitKey()
+    elif key == ord('p') or key == ord('P'):
+        cv2.imwrite('capture.png',frame)
+
+    t_stop = time.perf_counter()
+    frame_rate_calc = float(1/(t_stop - t_start))
+    if len(frame_rate_buffer) >= fps_avg_len:
+        frame_rate_buffer.pop(0)
+        frame_rate_buffer.append(frame_rate_calc)
+    else:
+        frame_rate_buffer.append(frame_rate_calc)
+    avg_frame_rate = np.mean(frame_rate_buffer)
+
+print(f'Average pipeline FPS: {avg_frame_rate:.2f}')
+if source_type == 'video' or source_type == 'usb':
+    cap.release()
+elif source_type == 'picamera':
+    cap.stop()
+if record: recorder.release()
+cv2.destroyAllWindows()
