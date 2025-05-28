@@ -14,6 +14,17 @@ This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio
 
 ---
 
+## Example Images
+
+Here’s what the detection looks like in action:
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2932ada3-0805-435b-a130-b503a15976d9" alt="Detection Example 1" width="400"/>
+  <img src="https://github.com/user-attachments/assets/c3ce35b1-5c16-4d7b-ab53-6635c809e226" alt="Detection Example 2" width="400"/>
+</p>
+
+---
+
 ##  Hardware
 
 | Tool | Purpose |
@@ -46,14 +57,7 @@ parking_guard_detection/
 ├── README.md
 ├── requirements.txt
 └── LICENSE
-´´´
 
-## Example Images
 
-Here’s what the detection looks like in action:
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/2932ada3-0805-435b-a130-b503a15976d9" alt="Detection Example 1" width="400"/>
-  <img src="https://github.com/user-attachments/assets/c3ce35b1-5c16-4d7b-ab53-6635c809e226" alt="Detection Example 2" width="400"/>
-</p>
 
