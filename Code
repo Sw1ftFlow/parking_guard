@@ -14,7 +14,9 @@ from flask import Flask, Response, request, redirect, url_for, session, render_t
 import simplepam
 import requests
 
-
+# Sms cooldown global variables (wait 30 minutes before sending a new sms)
+last_sms_time = 0  # Timestamp of last SMS sent
+sms_cooldown = 1800  # 30 minutes in seconds
 
 # logging
 def get_next_log_filename(directory="."):
@@ -306,9 +308,6 @@ while True:
                 #
                 del person_tracks[tid]
                 
-    # Text cooldown
-    last_sms_time = 0  # Timestamp of last SMS sent
-    sms_cooldown = 900  # 15 minutes in seconds
 
     # --- Draw boxes and labels ---
     for i in range(len(detections)):
@@ -337,21 +336,24 @@ while True:
                 if person_crop.size > 0:
                     lab = cv2.cvtColor(person_crop, cv2.COLOR_BGR2LAB)
                     L, A, B = cv2.split(lab)
-                    yellow_mask = cv2.inRange(B, 145, 255)
+                    yellow_mask = cv2.inRange(B, 160, 255)
                     yellow_ratio = cv2.countNonZero(yellow_mask) / (person_crop.shape[0] * person_crop.shape[1])
-                    if yellow_ratio > 0.1:
-                        print("Security guard detected!")
-                        cv2.putText(frame, "PARKING GUARD", (xmin, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,255), 2)
+                    if yellow_ratio > 0.15: # % av bounding box som ska vara gul
+                        print("P-VAKT detected!")
+                        print("B channel min/max:", B.min(), B.max())
+                        cv2.imshow("Yellow Mask", yellow_mask)
+                        cv2.waitKey(1)
+                        cv2.putText(frame, "P-VAKT", (xmin, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,255), 2)
                         
                         # --- SMS cooldown logic ---
                         current_time = time.time()
                         if current_time - last_sms_time > sms_cooldown:
                             send_twilio_sms(
                                 to_number="+46735111116",
-                                body="Ahoy! A parking guard has been sighted near your car!",
-                                messaging_service_sid="MGa0cf5198a6997e71254070aa1884df9c",
-                                account_sid="********",
-                                auth_token="********"
+                                body="P-VAKT nära din bil!",
+                                messaging_service_sid="****",
+                                account_sid="****",
+                                auth_token="****"
                             )
                             last_sms_time = current_time
 
