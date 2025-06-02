@@ -349,7 +349,7 @@ while True:
                         current_time = time.time()
                         if current_time - last_sms_time > sms_cooldown:
                             send_twilio_sms(
-                                to_number="+46735111116",
+                                to_number="+46735123456",
                                 body="P-VAKT nära din bil!",
                                 messaging_service_sid="****",
                                 account_sid="****",
