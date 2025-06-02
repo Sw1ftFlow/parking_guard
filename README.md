@@ -36,14 +36,40 @@ Here’s what the detection looks like in action:
 
 ---
 
-##  Model
+## Models
 
-**Yolo11n**
+### YOLOv11n
 
-- The base model is a Yolo11n (nano) the smallest and fastest model, but also least accurate 
-- FPS: The camera feed usually provides a video stream of around 6-7 FPS and a resolution of 1280x720
-- Stream: The stream is accessiable via a flask app setup and can be viewed while inside the local network. The stream is protected using a login and password
-- Guard detection: The model is pre-trained to recognize people and create bounding boxes. Once a bounding box consits of a certain amount of yellow pixels the model will flag this as a parking guard. Simple yet effective. 
+- **Base Model:** YOLOv11n (nano) is the smallest and fastest YOLO model, making it ideal for edge devices and real-time applications where computational resources are limited. While it is less accurate than larger variants, it achieves a strong balance between speed and detection quality.
+- **FPS:** On a Raspberry Pi 5, the camera feed typically provides 6–7 FPS at 1280x720 resolution. This ensures smooth real-time monitoring and alerting for parking guard detection.
+- **Stream:** The video stream is served via a Flask web server and can be viewed on any device within the local network. Access is protected by login and password, ensuring security and privacy.
+- **Guard Detection:** The model is pre-trained to detect people and draw bounding boxes around each individual. After detection, if a bounding box contains a certain threshold of yellow pixels (indicative of a parking guard’s uniform or vest), the system flags that person as a parking guard. This approach is simple yet effective for reliable identification in real-world environments.
+- **Performance Metrics:**  
+  - **mAP (COCO, 640x640):** 39.5  
+  - **Parameters:** 2.6 million  
+  - **FLOPs:** 6.5 billion  
+  - **Speed:** ~56 ms per image on CPU (ONNX), but real-world edge device performance is 6–7 FPS at 1280x720.
+- **Integration:** YOLOv11n is optimized for speed and efficiency, making it highly adaptable for deployment on edge devices like the Raspberry Pi 5. Its lightweight nature allows for continuous operation and easy integration with additional logic such as color analysis and persistent ID tracking.
+
+
+### FastReID (or Torchreid)
+
+- **Purpose:** FastReID is a state-of-the-art re-identification platform, designed for recognizing and tracking individuals across video frames.
+- **Why Use It:**  
+  - **Persistent Tracking:** YOLO assigns new IDs to people each time they leave and re-enter the frame or change their appearance. FastReID (or similar models like Torchreid) assigns a persistent ID to each person, allowing the system to recognize the same individual even if they move, change pose, or temporarily leave the frame.
+  - **Event Logging:** With persistent IDs, analytics and event logging (e.g., dwell time, entry/exit) are more accurate and meaningful.
+  - **Better Alerts:** By tracking individuals over time, the system can provide more reliable alerts and avoid redundant notifications for the same person.
+- **How It Works:**  
+  - **Feature Extraction:** For each detected person, FastReID extracts a unique feature vector (embedding) based on their appearance.
+  - **Matching:** When a person is detected in subsequent frames, their new feature vector is compared to those stored in a database. If a match is found, the same persistent ID is assigned.
+  - **Multi-Frame Averaging:** To improve robustness, feature vectors from several frames are averaged before matching, reducing false positives and ID switches.
+- **Integration:** FastReID (or Torchreid) is integrated into the pipeline after YOLO detection, providing persistent IDs that are used for logging and analytics.
+
+## Why Use Persistent IDs?
+
+- **Accurate Analytics:** Logs and analytics are tied to individuals, not just detections.
+- **Reduced False Alerts:** The system can avoid sending multiple alerts for the same person.
+- **Better User Experience:** Users can track the same guard over time, even if they move or change appearance.
 
 ---
 
