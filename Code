@@ -13,12 +13,28 @@ from ultralytics import YOLO
 from flask import Flask, Response, request, redirect, url_for, session, render_template_string
 import simplepam
 import requests
+#re-id
+from torchreid.utils import FeatureExtractor
+from collections import defaultdict
+
+# For multi-frame feature averaging
+tracked_features = defaultdict(list)  # {track_id: [feature1, feature2, ...]}
+reid_database = {}  # {persistent_id: feature_vector}
+next_persistent_id = 1
+reid_extractor = FeatureExtractor(model_name='osnet_x1_0', device='cpu')
 
 # Sms cooldown global variables (wait 30 minutes before sending a new sms)
 last_sms_time = 0  # Timestamp of last SMS sent
 sms_cooldown = 1800  # 30 minutes in seconds
 
 # logging
+person_tracking = {}  # key: track_id, value: {"frames_present": int, "frames_absent": int, "entry_time": float, "exit_time": float, "logged": bool}
+
+
+# --- Detection parameters ---
+MIN_FRAMES_PRESENT = 10  # Minimum frames to log entry
+MIN_FRAMES_ABSENT = 10   # Minimum frames to log exit
+
 def get_next_log_filename(directory="."):
     today_str = datetime.now().strftime("%Y-%m-%d")
     idx = 0
@@ -29,13 +45,25 @@ def get_next_log_filename(directory="."):
             return filepath
         idx += 1
 
-def log_person_event_to_csv(filename, tid, class_name, entry, exit_, dwell):
+def log_person_event_to_csv(filename, persistent_id, class_name, entry, exit_, dwell):
+    """
+    Log a person event to a CSV file using the persistent ID assigned by re-ID.
+
+    Args:
+        filename (str): Path to the CSV file.
+        persistent_id (int): Persistent ID assigned by the re-ID system.
+        class_name (str): Object class (e.g., 'person').
+        entry (float): Entry timestamp (Unix time).
+        exit_ (float): Exit timestamp (Unix time).
+        dwell (float): Dwell time in seconds.
+    """
     file_exists = os.path.isfile(filename)
     with open(filename, 'a', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(['id', 'class', 'entry', 'exit', 'dwell_seconds'])
-        writer.writerow([tid, class_name, time.ctime(entry), time.ctime(exit_), f"{dwell:.2f}"])
+            writer.writerow(['persistent_id', 'class', 'entry', 'exit', 'dwell_seconds'])
+        writer.writerow([persistent_id, class_name, time.ctime(entry), time.ctime(exit_), f"{dwell:.2f}"])
+
         
 # send sms with Twilio
 def send_twilio_sms(to_number, body, messaging_service_sid, account_sid, auth_token):
@@ -209,6 +237,16 @@ frame_rate_buffer = []
 fps_avg_len = 200
 img_count = 0
 
+
+#re-id
+reid_extractor = FeatureExtractor(
+    model_name='osnet_x1_0',  # Or use 'osnet_x0_25' for faster but less accurate
+    device='cpu'
+)
+reid_database = {}
+next_persistent_id = 1
+
+
 # --- Person tracking setup ---
 person_tracks = {}  # {track_id: {'entry': timestamp, 'exit': timestamp, 'class': class_name, 'missed': 0}}
 MAX_MISSED_FRAMES = 15  # Number of frames to wait before considering a person as exited
@@ -329,6 +367,38 @@ while True:
             cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), color, cv2.FILLED)
             cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
             object_count = object_count + 1
+            
+            # --- Person Re-ID block ---
+            if classname == "person" and hasattr(detections, "id") and detections.id is not None:
+                tid = int(detections[i].id.item())
+                person_crop = frame[ymin:ymax, xmin:xmax]
+                if person_crop.size > 0:
+                    crop_resized = cv2.resize(person_crop, (128, 256))
+                    feature = reid_extractor(crop_resized).flatten()
+                    # Convert to NumPy array here (only once)
+                    feature_np = feature.cpu().numpy() if hasattr(feature, 'cpu') else np.array(feature)
+                    # Check for shape consistency (optional but recommended)
+                    if len(tracked_features[tid]) > 0 and feature_np.shape != tracked_features[tid][0].shape:
+                        print("Warning: Feature shape mismatch! Skipping this feature.")
+                        continue
+                    tracked_features[tid].append(feature_np)
+                    if len(tracked_features[tid]) > 5:  # Keep only last 5 features
+                        tracked_features[tid].pop(0)
+                    avg_feature = np.mean(tracked_features[tid], axis=0)
+
+                    assigned_pid = None
+                    for pid, db_feat in reid_database.items():
+                        sim = np.dot(avg_feature, db_feat) / (np.linalg.norm(avg_feature) * np.linalg.norm(db_feat))
+                        if sim > 0.6:  # Similarity threshold
+                            assigned_pid = pid
+                            break
+                    if assigned_pid is None:
+                        assigned_pid = next_persistent_id
+                        reid_database[assigned_pid] = avg_feature
+                        next_persistent_id += 1
+                    cv2.putText(frame, f"PersistentID:{assigned_pid}", (xmin, ymin-25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+            # --- End Person Re-ID block ---
+
 
             # --- Yellow vest detection (single frame) ---
             if classname == "person":
@@ -349,11 +419,11 @@ while True:
                         current_time = time.time()
                         if current_time - last_sms_time > sms_cooldown:
                             send_twilio_sms(
-                                to_number="+46735123456",
+                                to_number="+46735111116",
                                 body="P-VAKT nära din bil!",
-                                messaging_service_sid="****",
-                                account_sid="****",
-                                auth_token="****"
+                                messaging_service_sid="*****",
+                                account_sid="*****",
+                                auth_token="*****"
                             )
                             last_sms_time = current_time
 
