@@ -1,6 +1,8 @@
 #  NO MORE PARKING TICKETS
 
-This is an end-to-end learning project using **Rasperry Pie 5**, **Logitech Brio 300**, and **YOLO11n model** to detect when a parking guard is spotted in frame and sends a sms message to the owner using **Twilio**. The live feed is accessible via a local webserver setup using **Flask**.
+This is an end-to-end learning project using a Raspberry Pi 5, Logitech Brio 300 camera, and the YOLOv11n model to detect parking guards in real time. When a guard is spotted, the system sends an SMS alert to the owner via Twilio. The live video feed is accessible through a local web server powered by Flask, and is secured with login and password.
+
+To further enhance the system, FastReID (torchreid) is integrated for advanced person re-identification. This allows the system to assign persistent IDs to each detected individual, enabling reliable tracking of guards even as they move, change pose, or temporarily leave the camera’s view. By combining YOLOv11n’s fast and accurate object detection with FastReID’s robust person recognition, the project delivers more accurate and actionable alerts, reducing false alarms and improving the overall user experience.
 
 ---
 
